@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"C:\\\\Users\\\\Admin\\\\Documents\\\\\")",
+      "PowerShell(netstat -ano)"
+    ]
+  }
+}
