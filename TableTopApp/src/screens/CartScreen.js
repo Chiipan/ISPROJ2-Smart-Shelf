@@ -1,13 +1,31 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../theme';
+import { placeOrder } from '../api/client';
 
 const VAT = 0.05;
 
-export default function CartScreen({ cartItems, onRemove, onUpdateQty, onNavigate }) {
+export default function CartScreen({ cartItems, onRemove, onUpdateQty, onNavigate, onOrderPlaced }) {
+  const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState('');
+
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const total = subtotal + subtotal * VAT;
+
+  const handlePlaceOrder = async () => {
+    if (cartItems.length === 0 || placing) return;
+    setError('');
+    setPlacing(true);
+    try {
+      await placeOrder(cartItems);
+      onOrderPlaced();
+    } catch (e) {
+      setError(e.message || 'Placing order failed');
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -18,8 +36,14 @@ export default function CartScreen({ cartItems, onRemove, onUpdateQty, onNavigat
           <Text style={styles.subtitle}>Check your current list of orders</Text>
         </View>
         <View style={styles.headerBtns}>
-          <TouchableOpacity style={styles.placeBtn}>
-            <Text style={styles.placeBtnText}>Place Order</Text>
+          <TouchableOpacity
+            style={[styles.placeBtn, (placing || cartItems.length === 0) && styles.btnDisabled]}
+            onPress={handlePlaceOrder}
+            disabled={placing || cartItems.length === 0}
+          >
+            {placing
+              ? <ActivityIndicator size="small" color={COLORS.white} />
+              : <Text style={styles.placeBtnText}>Place Order</Text>}
           </TouchableOpacity>
           <TouchableOpacity style={styles.addMenuBtn} onPress={() => onNavigate('menu')}>
             <Text style={styles.addMenuText}>Add Menu</Text>
@@ -82,6 +106,7 @@ export default function CartScreen({ cartItems, onRemove, onUpdateQty, onNavigat
 
       {/* Summary */}
       <View style={styles.summary}>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <Text style={styles.vatText}>Vat: {(VAT * 100).toFixed(0)}%</Text>
         <Text style={styles.totalText}>Total Sale: PHP {total.toFixed(2)}</Text>
       </View>
@@ -251,6 +276,14 @@ const styles = StyleSheet.create({
     borderTopColor: '#ECECEC',
     paddingHorizontal: 22,
     paddingVertical: 14,
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
+  errorText: {
+    color: COLORS.red,
+    fontSize: 13,
+    marginBottom: 6,
   },
   vatText: {
     fontSize: 13,

@@ -1,12 +1,32 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../theme';
+import { loginTable } from '../api/client';
 
 export default function LoginScreen({ onLogin }) {
   const [tableName, setTableName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!tableName.trim() || !password) {
+      setError('Table name and password are required');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const table = await loginTable(tableName.trim(), password);
+      onLogin(table);
+    } catch (e) {
+      setError(e.message || 'Login failed — is the server running?');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -57,9 +77,19 @@ export default function LoginScreen({ onLogin }) {
           <Text style={styles.forgotText}>Forgot Password?</Text>
         </TouchableOpacity>
 
+        {/* Error message */}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
         {/* Login Button */}
-        <TouchableOpacity style={styles.loginBtn} onPress={onLogin} activeOpacity={0.85}>
-          <Text style={styles.loginBtnText}>Login</Text>
+        <TouchableOpacity
+          style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+          onPress={handleLogin}
+          activeOpacity={0.85}
+          disabled={loading}
+        >
+          {loading
+            ? <ActivityIndicator color={COLORS.white} />
+            : <Text style={styles.loginBtnText}>Login</Text>}
         </TouchableOpacity>
       </View>
     </View>
@@ -158,11 +188,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.primary,
   },
+  errorText: {
+    color: COLORS.red,
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   loginBtn: {
     backgroundColor: COLORS.primary,
     borderRadius: SIZES.borderRadius,
     paddingVertical: 13,
     alignItems: 'center',
+  },
+  loginBtnDisabled: {
+    opacity: 0.7,
   },
   loginBtnText: {
     color: COLORS.white,

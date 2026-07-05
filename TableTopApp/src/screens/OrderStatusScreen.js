@@ -1,16 +1,39 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../theme';
-import { PENDING_ORDERS } from '../data/mockData';
+import { fetchMyOrders } from '../api/client';
 
+// Maps order_details.status values (database) to badge text + colors
 const STATUS_STYLE = {
-  Pending:   { bg: '#FFF3E0', text: '#F5891F' },
-  Preparing: { bg: '#E3F2FD', text: '#1976D2' },
-  Ready:     { bg: '#E8F5E9', text: '#388E3C' },
+  queued:         { label: 'Pending',   bg: '#FFF3E0', text: '#F5891F' },
+  in_progress:    { label: 'Preparing', bg: '#E3F2FD', text: '#1976D2' },
+  ready_to_serve: { label: 'Ready',     bg: '#E8F5E9', text: '#388E3C' },
+  served:         { label: 'Served',    bg: '#EEEEEE', text: '#616161' },
+  cancelled:      { label: 'Cancelled', bg: '#FFEBEE', text: '#C62828' },
 };
 
 export default function OrderStatusScreen({ onNavigate }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadOrders = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setOrders(await fetchMyOrders());
+    } catch (e) {
+      setError(e.message || 'Could not load your orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadOrders(); }, []);
+
+  const allItems = orders.flatMap(o => o.items);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -19,44 +42,70 @@ export default function OrderStatusScreen({ onNavigate }) {
           <Text style={styles.title}>Pending Orders</Text>
           <Text style={styles.subtitle}>Check the status of your orders</Text>
         </View>
-        <TouchableOpacity style={styles.addMenuBtn} onPress={() => onNavigate('menu')}>
-          <Text style={styles.addMenuText}>Add Menu</Text>
-        </TouchableOpacity>
+        <View style={styles.headerBtns}>
+          <TouchableOpacity style={styles.refreshBtn} onPress={loadOrders}>
+            <Ionicons name="refresh" size={16} color={COLORS.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addMenuBtn} onPress={() => onNavigate('menu')}>
+            <Text style={styles.addMenuText}>Add Menu</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Orders */}
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {PENDING_ORDERS.map(order => {
-          const s = STATUS_STYLE[order.status] || STATUS_STYLE.Pending;
-          return (
-            <View key={order.id} style={styles.orderItem}>
-              {/* Thumbnail */}
-              <View style={styles.thumb}>
-                <Ionicons name="image-outline" size={26} color="#C0C0C0" />
-              </View>
-
-              {/* Details */}
-              <View style={styles.details}>
-                <View style={styles.detailsHeader}>
-                  <Text style={styles.orderName}>{order.name}</Text>
-                  <Text style={styles.orderQty}>Quantity: {order.quantity}</Text>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={44} color={COLORS.grayMedium} />
+          <Text style={styles.stateText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadOrders}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : allItems.length === 0 ? (
+        <View style={styles.center}>
+          <Ionicons name="receipt-outline" size={44} color={COLORS.grayMedium} />
+          <Text style={styles.stateText}>No orders yet</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => onNavigate('menu')}>
+            <Text style={styles.retryText}>Browse Menu</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          {allItems.map(item => {
+            const s = STATUS_STYLE[item.status] || STATUS_STYLE.queued;
+            return (
+              <View key={item.order_details_id} style={styles.orderItem}>
+                {/* Thumbnail */}
+                <View style={styles.thumb}>
+                  <Ionicons name="image-outline" size={26} color="#C0C0C0" />
                 </View>
-                <Text style={styles.orderDesc} numberOfLines={2}>{order.description}</Text>
 
-                {/* Status + Remove */}
-                <View style={styles.orderFooter}>
-                  <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
-                    <Text style={[styles.statusText, { color: s.text }]}>{order.status}</Text>
+                {/* Details */}
+                <View style={styles.details}>
+                  <View style={styles.detailsHeader}>
+                    <Text style={styles.orderName}>{item.menu_title}</Text>
+                    <Text style={styles.orderQty}>Quantity: {item.quantity}</Text>
                   </View>
-                  <TouchableOpacity>
-                    <Text style={styles.removeText}>Remove Order {'>'}</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.orderDesc} numberOfLines={2}>
+                    {item.notes ? `Note: ${item.notes}` : item.description}
+                  </Text>
+
+                  <View style={styles.orderFooter}>
+                    <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
+                      <Text style={[styles.statusText, { color: s.text }]}>{s.label}</Text>
+                    </View>
+                    <Text style={styles.orderTotal}>PHP {Number(item.total).toFixed(2)}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -86,6 +135,17 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 3,
   },
+  headerBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  refreshBtn: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: SIZES.borderRadius,
+    padding: 9,
+  },
   addMenuBtn: {
     backgroundColor: COLORS.primary,
     borderRadius: SIZES.borderRadius,
@@ -93,6 +153,28 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   addMenuText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  stateText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  retryBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    marginTop: 6,
+  },
+  retryText: {
     color: COLORS.white,
     fontSize: 13,
     fontWeight: '700',
@@ -156,9 +238,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  removeText: {
-    fontSize: 13,
-    color: COLORS.primary,
-    fontWeight: '600',
+  orderTotal: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
 });

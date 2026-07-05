@@ -8,12 +8,11 @@ import CartScreen from './src/screens/CartScreen';
 import OrderStatusScreen from './src/screens/OrderStatusScreen';
 import CallWaiterScreen from './src/screens/CallWaiterScreen';
 import Sidebar from './src/components/Sidebar';
-import { INITIAL_CART } from './src/data/mockData';
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [table, setTable] = useState(null); // { table_id, table_name } after login
   const [activeScreen, setActiveScreen] = useState('menu');
-  const [cartItems, setCartItems] = useState(INITIAL_CART);
+  const [cartItems, setCartItems] = useState([]);
 
   const addToCart = (item) => {
     setCartItems(prev => {
@@ -39,11 +38,16 @@ export default function App() {
     );
   };
 
-  if (!isLoggedIn) {
+  const handleOrderPlaced = () => {
+    setCartItems([]);
+    setActiveScreen('orders');
+  };
+
+  if (!table) {
     return (
       <>
         <StatusBar style="dark" />
-        <LoginScreen onLogin={() => setIsLoggedIn(true)} />
+        <LoginScreen onLogin={setTable} />
       </>
     );
   }
@@ -59,6 +63,7 @@ export default function App() {
             onRemove={removeFromCart}
             onUpdateQty={updateQty}
             onNavigate={setActiveScreen}
+            onOrderPlaced={handleOrderPlaced}
           />
         );
       case 'orders':
@@ -73,7 +78,12 @@ export default function App() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <Sidebar activeScreen={activeScreen} onNavigate={setActiveScreen} />
+      <Sidebar
+        activeScreen={activeScreen}
+        onNavigate={setActiveScreen}
+        tableName={table.table_name}
+        cartCount={cartItems.reduce((n, c) => n + c.quantity, 0)}
+      />
       <View style={styles.content}>{renderScreen()}</View>
     </View>
   );

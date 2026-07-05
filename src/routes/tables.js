@@ -140,7 +140,8 @@ tableRouter.post("/", authMiddleware, async (req, res) => {
 });
 
 
-tableRouter.post("/login-table", authMiddleware, async(req,res)=>{
+// No authMiddleware here: this IS how a tablet gets its token
+tableRouter.post("/login-table", async(req,res)=>{
 try {
     const { first_name, last_name, tablename, password } = req.body;
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, CATEGORY_COLORS } from '../theme';
 
@@ -8,10 +8,14 @@ export default function MenuCard({ item, onAddToCart }) {
 
   return (
     <View style={styles.card}>
-      {/* Image placeholder */}
-      <View style={styles.imagePlaceholder}>
-        <Ionicons name="image-outline" size={30} color="#C0C0C0" />
-      </View>
+      {/* Photo from DB (menu_item.food_pic) or gray placeholder */}
+      {item.image ? (
+        <Image source={item.image} style={styles.itemImage} resizeMode="cover" />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Ionicons name="image-outline" size={30} color="#C0C0C0" />
+        </View>
+      )}
 
       <View style={styles.body}>
         {/* Column labels */}
@@ -60,6 +64,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#EBEBEB',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  itemImage: {
+    height: 120,
+    width: '100%',
   },
   body: {
     padding: 12,

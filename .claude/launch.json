@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expo-web",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--web"],
+      "cwd": "TableTopApp",
+      "port": 8081
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["src/index.js"],
+      "port": 3002
+    }
+  ]
+}

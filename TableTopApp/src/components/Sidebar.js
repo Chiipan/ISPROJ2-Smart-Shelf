@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { id: 'waiter', label: 'Call a Waiter', icon: 'hand-left-outline',    activeIcon: 'hand-left' },
 ];
 
-export default function Sidebar({ activeScreen, onNavigate }) {
+export default function Sidebar({ activeScreen, onNavigate, tableName, cartCount = 0 }) {
   return (
     <View style={styles.container}>
       {/* Logo */}
@@ -45,12 +45,12 @@ export default function Sidebar({ activeScreen, onNavigate }) {
                   {item.label}
                 </Text>
               </View>
-              {item.hasGear && (
-                <Ionicons
-                  name="settings-outline"
-                  size={12}
-                  color={active ? COLORS.primary : 'rgba(255,255,255,0.45)'}
-                />
+              {item.id === 'cart' && cartCount > 0 && (
+                <View style={[styles.cartBadge, active && styles.cartBadgeActive]}>
+                  <Text style={[styles.cartBadgeText, active && styles.cartBadgeTextActive]}>
+                    {cartCount}
+                  </Text>
+                </View>
               )}
             </TouchableOpacity>
           );
@@ -62,8 +62,8 @@ export default function Sidebar({ activeScreen, onNavigate }) {
       {/* Bottom */}
       <View style={styles.bottomSection}>
         <View style={styles.divider} />
-        <Text style={styles.bottomRestaurant}>Restaurant</Text>
-        <Text style={styles.bottomTable}>Table 24</Text>
+        <Text style={styles.bottomRestaurant}>Welcome</Text>
+        <Text style={styles.bottomTable}>{tableName || 'Table'}</Text>
       </View>
     </View>
   );
@@ -137,6 +137,26 @@ const styles = StyleSheet.create({
   navLabelActive: {
     color: COLORS.primary,
     fontWeight: '700',
+  },
+  cartBadge: {
+    backgroundColor: COLORS.white,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeActive: {
+    backgroundColor: COLORS.primary,
+  },
+  cartBadgeText: {
+    color: COLORS.primary,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  cartBadgeTextActive: {
+    color: COLORS.white,
   },
   bottomSection: {
     paddingHorizontal: 8,

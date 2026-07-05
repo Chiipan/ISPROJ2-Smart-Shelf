@@ -19,9 +19,10 @@ export const SIZES = {
   padding: 16,
 };
 
+// Keys match category_name values seeded in the database
 export const CATEGORY_COLORS = {
-  Appetizer: '#F5891F',
-  Dessert: '#4CAF50',
-  Drink: '#2196F3',
-  Main: '#9C27B0',
+  Appetizers: '#F5891F',
+  Desserts: '#4CAF50',
+  Drinks: '#2196F3',
+  Mains: '#9C27B0',
 };

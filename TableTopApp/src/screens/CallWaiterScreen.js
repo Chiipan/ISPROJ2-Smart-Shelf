@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../theme';
+import { callWaiter } from '../api/client';
 
 export default function CallWaiterScreen() {
   const [called, setCalled] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleCall = async () => {
+    setError('');
+    setSending(true);
+    try {
+      await callWaiter();
+      setCalled(true);
+    } catch (e) {
+      setError(e.message || 'Could not reach the server');
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -26,14 +42,23 @@ export default function CallWaiterScreen() {
             : 'Tap the button below to alert a nearby waiter for assistance at your table.'}
         </Text>
 
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
         {!called ? (
           <TouchableOpacity
-            style={styles.callBtn}
-            onPress={() => setCalled(true)}
+            style={[styles.callBtn, sending && { opacity: 0.7 }]}
+            onPress={handleCall}
             activeOpacity={0.85}
+            disabled={sending}
           >
-            <Ionicons name="notifications" size={18} color={COLORS.white} />
-            <Text style={styles.callBtnText}>Call Waiter Now</Text>
+            {sending ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <>
+                <Ionicons name="notifications" size={18} color={COLORS.white} />
+                <Text style={styles.callBtnText}>Call Waiter Now</Text>
+              </>
+            )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.resetBtn} onPress={() => setCalled(false)}>
@@ -88,6 +113,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 21,
     marginBottom: 30,
+  },
+  errorText: {
+    color: COLORS.red,
+    fontSize: 13,
+    marginBottom: 14,
+    textAlign: 'center',
   },
   callBtn: {
     flexDirection: 'row',
