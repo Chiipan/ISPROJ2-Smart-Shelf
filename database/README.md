@@ -7,6 +7,9 @@ Matches the conventions the Express repos already use: `NVARCHAR(64)` uuid PKs
 
 ## Running
 
+Shortcut: `npm run db:setup` from the repo root does all three steps below
+(server/database taken from `.env`, defaulting to LocalDB). Manually:
+
 ```powershell
 # 0. Create the DB if it doesn't exist yet
 sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "IF DB_ID('tabletop') IS NULL CREATE DATABASE tabletop;"

@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { JWT_SECRET, JWT_EXPIRES_IN } = require("../config");
 const { UsersRepository } = require("../repositories/authRepository");
 const { RolesRepository } = require("../repositories/rolesRepository");
 const {
@@ -29,12 +30,12 @@ class AuthService {
 
   // Generate JWT token
   generateToken(payload) {
-    return jwt.sign(payload, "123", { expiresIn: "1h" });
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   }
 
   // Verify JWT token
   verifyToken(token) {
-    return jwt.verify(token, "123");
+    return jwt.verify(token, JWT_SECRET);
   }
 
   // Register a new user

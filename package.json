@@ -14,7 +14,8 @@
     "nodemon": "^3.1.11"
   },
   "scripts": {
-  "dev": "nodemon src/index.js"
-}
-
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "db:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-db.ps1"
+  }
 }

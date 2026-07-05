@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { TableRepository } = require("../repositories/tableRepository");
+const { JWT_SECRET, JWT_EXPIRES_IN } = require("../config");
 
 class OrderService {
   constructor(tableRepo = new TableRepository()) {
@@ -7,7 +8,7 @@ class OrderService {
   }
 
   generateToken(payload) {
-    return jwt.sign(payload, "123", { expiresIn: "1h" });
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   }
 
   // Login user
