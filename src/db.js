@@ -1,7 +1,9 @@
 const sql = require('msnodesqlv8');
 
+// Shared dev server (RIVS-LPLEGION5) alternative:
+// 'server=RIVS-LPLEGION5\\MSSQLSERVER2019;Database=tabletop;Trusted_Connection=Yes;Driver={ODBC Driver 17 for SQL Server};'
 const connectionString =
-  'server=RIVS-LPLEGION5\\MSSQLSERVER2019;Database=tabletop;Trusted_Connection=Yes;Driver={ODBC Driver 17 for SQL Server};';
+  'server=(localdb)\\MSSQLLocalDB;Database=tabletop;Trusted_Connection=Yes;Driver={ODBC Driver 17 for SQL Server};';
 
 function getDBConnection() {
   return new Promise((resolve, reject) => {
