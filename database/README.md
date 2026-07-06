@@ -23,8 +23,21 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -d tabletop -b -I -i database\02_seed.sql
 ```
 
 For the shared dev server, swap `-S "(localdb)\MSSQLLocalDB"` for
-`-S RIVS-LPLEGION5\MSSQLSERVER2019 -E`. Seed admin login:
-`admin@smartshelf.local` / `admin123` (bcrypt-hashed) — change it in production.
+`-S RIVS-LPLEGION5\MSSQLSERVER2019 -E`.
+
+## Dev logins (seeded — change all of these in production)
+
+| Login screen tab | Account | Password | Lands on |
+|---|---|---|---|
+| Waiter | `waiter@smartshelf.local` (Juan Dela Cruz) | `waiter123` | Table Board + Tickets |
+| Kitchen | `kitchen@smartshelf.local` (Pedro Reyes) | `kitchen123` | KDS placeholder |
+| Waiter (admin role) | `admin@smartshelf.local` | `admin123` | Table Board + Tickets |
+| Customer (step 1) | any table: `Table 1` … `Table 15` | `1234` | Guest / Member choice |
+
+Customer step 2: **Dine as Guest** (no account) or sign in / register as a
+**member** — registration creates a `users` row with the `customer` role for
+future promotions and points. Example member created during testing:
+`ana.lopez@example.com` / `member123`.
 
 ## Module → table map
 
