@@ -3,14 +3,21 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../theme';
 
-const NAV_ITEMS = [
-  { id: 'menu',   label: 'Menu',          icon: 'restaurant-outline',  activeIcon: 'restaurant' },
-  { id: 'cart',   label: 'Cart',          icon: 'cart-outline',         activeIcon: 'cart',        hasGear: true },
-  { id: 'orders', label: 'Order Status',  icon: 'clipboard-outline',    activeIcon: 'clipboard' },
-  { id: 'waiter', label: 'Call a Waiter', icon: 'hand-left-outline',    activeIcon: 'hand-left' },
+// Same orange sidebar as the customer app, but for staff dashboards.
+// navItems/roleLabel are props so the kitchen module can reuse it.
+const DEFAULT_NAV = [
+  { id: 'tables',  label: 'Tables',  icon: 'grid-outline',    activeIcon: 'grid' },
+  { id: 'tickets', label: 'Tickets', icon: 'receipt-outline', activeIcon: 'receipt' },
 ];
 
-export default function Sidebar({ activeScreen, onNavigate, tableName, memberName, cartCount = 0 }) {
+export default function WaiterSidebar({
+  activeScreen,
+  onNavigate,
+  waiterName,
+  onLogout,
+  roleLabel = 'Waiter',
+  navItems = DEFAULT_NAV,
+}) {
   return (
     <View style={styles.container}>
       {/* Logo */}
@@ -19,14 +26,14 @@ export default function Sidebar({ activeScreen, onNavigate, tableName, memberNam
           <Ionicons name="restaurant" size={26} color={COLORS.white} />
         </View>
         <Text style={styles.logoText}>TableTop</Text>
-        <Text style={styles.logoSub}>Restaurant</Text>
+        <Text style={styles.logoSub}>{roleLabel}</Text>
       </View>
 
       <View style={styles.divider} />
 
       {/* Nav */}
       <View style={styles.navSection}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = activeScreen === item.id;
           return (
             <TouchableOpacity
@@ -35,23 +42,14 @@ export default function Sidebar({ activeScreen, onNavigate, tableName, memberNam
               onPress={() => onNavigate(item.id)}
               activeOpacity={0.75}
             >
-              <View style={styles.navLeft}>
-                <Ionicons
-                  name={active ? item.activeIcon : item.icon}
-                  size={17}
-                  color={active ? COLORS.primary : COLORS.white}
-                />
-                <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-                  {item.label}
-                </Text>
-              </View>
-              {item.id === 'cart' && cartCount > 0 && (
-                <View style={[styles.cartBadge, active && styles.cartBadgeActive]}>
-                  <Text style={[styles.cartBadgeText, active && styles.cartBadgeTextActive]}>
-                    {cartCount}
-                  </Text>
-                </View>
-              )}
+              <Ionicons
+                name={active ? item.activeIcon : item.icon}
+                size={17}
+                color={active ? COLORS.primary : COLORS.white}
+              />
+              <Text style={[styles.navLabel, active && styles.navLabelActive]}>
+                {item.label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -59,13 +57,15 @@ export default function Sidebar({ activeScreen, onNavigate, tableName, memberNam
 
       <View style={{ flex: 1 }} />
 
-      {/* Bottom */}
+      {/* Bottom: waiter identity + logout */}
       <View style={styles.bottomSection}>
         <View style={styles.divider} />
-        <Text style={styles.bottomRestaurant}>
-          {memberName ? `Hi, ${memberName.split(' ')[0]}!` : 'Welcome'}
-        </Text>
-        <Text style={styles.bottomTable}>{tableName || 'Table'}</Text>
+        <Text style={styles.bottomRole}>On shift</Text>
+        <Text style={styles.bottomName}>{waiterName}</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.75}>
+          <Ionicons name="log-out-outline" size={14} color={COLORS.white} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
     paddingVertical: 9,
     paddingHorizontal: 8,
     borderRadius: 8,
@@ -124,56 +124,46 @@ const styles = StyleSheet.create({
   navItemActive: {
     backgroundColor: COLORS.white,
   },
-  navLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
   navLabel: {
     color: COLORS.white,
     fontSize: 10,
     fontWeight: '500',
-    flexShrink: 1,
   },
   navLabelActive: {
     color: COLORS.primary,
     fontWeight: '700',
   },
-  cartBadge: {
-    backgroundColor: COLORS.white,
-    borderRadius: 9,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  cartBadgeActive: {
-    backgroundColor: COLORS.primary,
-  },
-  cartBadgeText: {
-    color: COLORS.primary,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  cartBadgeTextActive: {
-    color: COLORS.white,
-  },
   bottomSection: {
     paddingHorizontal: 8,
   },
-  bottomRestaurant: {
+  bottomRole: {
     color: 'rgba(255,255,255,0.65)',
     fontSize: 9,
     textAlign: 'center',
     marginTop: 8,
   },
-  bottomTable: {
+  bottomName: {
     color: COLORS.white,
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 3,
+    marginBottom: 10,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 6,
+    paddingVertical: 6,
+    marginHorizontal: 4,
+  },
+  logoutText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

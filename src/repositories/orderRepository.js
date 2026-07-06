@@ -96,6 +96,84 @@ class OrderRepository extends GenericRepository {
     return [...orders.values()];
   }
 
+  // Every open order as a "ticket" for the waiter/kitchen boards:
+  // order header + table name + all line items, oldest order first.
+  // Orders drop off the board once served (syncOrderStatus advances them).
+  async findOpenOrdersWithDetails() {
+    const rows = await executeQueryForRepo(
+      `SELECT
+         o.orders_id, o.status AS order_status, o.order_date, o.table_id, t.table_name,
+         od.order_details_id, od.menu_item_id, od.price, od.quantity,
+         od.total, od.notes, od.status AS item_status,
+         mi.menu_title, mi.food_item
+       FROM dbo.orders o
+       JOIN dbo.tables t ON t.table_id = o.table_id
+       JOIN dbo.order_details od ON od.orders_id = o.orders_id AND od.is_deleted = 0
+       JOIN dbo.menu_item mi ON mi.menu_item_id = od.menu_item_id
+       WHERE o.is_deleted = 0 AND o.status IN ('placed','in_progress','ready')
+       ORDER BY o.order_date ASC, od.created_at ASC`
+    );
+
+    const orders = new Map();
+    for (const r of rows) {
+      if (!orders.has(r.orders_id)) {
+        orders.set(r.orders_id, {
+          orders_id: r.orders_id,
+          table_id: r.table_id,
+          table_name: r.table_name,
+          status: r.order_status,
+          order_date: r.order_date,
+          items: [],
+        });
+      }
+      orders.get(r.orders_id).items.push({
+        order_details_id: r.order_details_id,
+        menu_item_id: r.menu_item_id,
+        menu_title: r.menu_title,
+        description: r.food_item,
+        price: r.price,
+        quantity: r.quantity,
+        total: r.total,
+        notes: r.notes,
+        status: r.item_status,
+      });
+    }
+    return [...orders.values()];
+  }
+
+  // Recomputes the parent order's status from its line items after a ticket
+  // line changes (placed -> in_progress -> ready -> served). Writes the
+  // order_process history row via updateOrderStatus. Returns the broadcast
+  // payload when the status changed, null when it did not.
+  async syncOrderStatus(orders_id) {
+    const rows = await executeQueryForRepo(
+      `SELECT status FROM dbo.order_details WHERE orders_id = ? AND is_deleted = 0`,
+      [orders_id]
+    );
+    const statuses = rows.map((r) => r.status);
+    if (statuses.length === 0) return null;
+
+    const isDone = (s) => s === "served" || s === "cancelled";
+    let next;
+    if (statuses.every((s) => s === "cancelled")) {
+      next = "cancelled";
+    } else if (statuses.every(isDone)) {
+      next = "served";
+    } else if (statuses.every((s) => s === "ready_to_serve" || isDone(s))) {
+      next = "ready";
+    } else if (statuses.some((s) => s !== "queued")) {
+      next = "in_progress";
+    } else {
+      next = "placed";
+    }
+
+    const order = await this.findById(orders_id);
+    if (!order || order.status === next) return null;
+
+    await this.updateOrderStatus(orders_id, next);
+    return { orders_id, table_id: order.table_id, status: next };
+  }
+
   // Kitchen queue - uses the view shipped in 01_schema.sql
   async findKitchenQueue() {
     return executeQueryForRepo(

@@ -7,12 +7,31 @@ import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
 import OrderStatusScreen from './src/screens/OrderStatusScreen';
 import CallWaiterScreen from './src/screens/CallWaiterScreen';
+import WaiterDashboardScreen from './src/screens/WaiterDashboardScreen';
+import TableBoardScreen from './src/screens/TableBoardScreen';
+import KitchenScreen from './src/screens/KitchenScreen';
 import Sidebar from './src/components/Sidebar';
+import WaiterSidebar from './src/components/WaiterSidebar';
+import { logout } from './src/api/client';
 
 export default function App() {
-  const [table, setTable] = useState(null); // { table_id, table_name } after login
+  // null before login, then either
+  //   { kind: 'table', table_id, table_name, member } - customer tablet
+  //   { kind: 'staff', user_id, name, role }          - waiter/kitchen staff
+  const [session, setSession] = useState(null);
   const [activeScreen, setActiveScreen] = useState('menu');
   const [cartItems, setCartItems] = useState([]);
+
+  const handleLogin = (nextSession) => {
+    setActiveScreen(nextSession.kind === 'staff' ? 'tables' : 'menu');
+    setSession(nextSession);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setCartItems([]);
+    setSession(null);
+  };
 
   const addToCart = (item) => {
     setCartItems(prev => {
@@ -43,15 +62,54 @@ export default function App() {
     setActiveScreen('orders');
   };
 
-  if (!table) {
+  if (!session) {
     return (
       <>
         <StatusBar style="dark" />
-        <LoginScreen onLogin={setTable} />
+        <LoginScreen onLogin={handleLogin} />
       </>
     );
   }
 
+  // Staff layouts: kitchen gets its placeholder KDS, everyone else
+  // (waiter, admin) gets the waiter dashboard (Tables + Tickets)
+  if (session.kind === 'staff') {
+    if (session.role === 'kitchen') {
+      return (
+        <View style={styles.root}>
+          <StatusBar style="light" />
+          <WaiterSidebar
+            activeScreen="kds"
+            onNavigate={() => {}}
+            waiterName={session.name}
+            onLogout={handleLogout}
+            roleLabel="Kitchen"
+            navItems={[{ id: 'kds', label: 'Kitchen', icon: 'flame-outline', activeIcon: 'flame' }]}
+          />
+          <View style={styles.content}>
+            <KitchenScreen />
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.root}>
+        <StatusBar style="light" />
+        <WaiterSidebar
+          activeScreen={activeScreen}
+          onNavigate={setActiveScreen}
+          waiterName={session.name}
+          onLogout={handleLogout}
+        />
+        <View style={styles.content}>
+          {activeScreen === 'tickets' ? <WaiterDashboardScreen /> : <TableBoardScreen />}
+        </View>
+      </View>
+    );
+  }
+
+  // Customer tablet layout
   const renderScreen = () => {
     switch (activeScreen) {
       case 'menu':
@@ -81,7 +139,8 @@ export default function App() {
       <Sidebar
         activeScreen={activeScreen}
         onNavigate={setActiveScreen}
-        tableName={table.table_name}
+        tableName={session.table_name}
+        memberName={session.member?.name}
         cartCount={cartItems.reduce((n, c) => n + c.quantity, 0)}
       />
       <View style={styles.content}>{renderScreen()}</View>

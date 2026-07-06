@@ -19,6 +19,18 @@ tableRouter.get("/", authMiddleware, async (req, res) => {
   }
 });
 
+// GET waiter table board - every table with capacity, availability,
+// pending calls, and open order items (see tableRepo.findTableBoard)
+tableRouter.get("/board", authMiddleware, async (req, res) => {
+  try {
+    const board = await tableRepo.findTableBoard();
+    res.status(200).json({ data: board });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: "Retrieve table board failed" });
+  }
+});
+
 // GET active tables
 tableRouter.get("/retrieve-active-table", authMiddleware, async (req, res) => {
   try {

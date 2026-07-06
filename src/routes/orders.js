@@ -83,6 +83,18 @@ orderRouter.get("/my-orders", authMiddleware, async (req, res) => {
   }
 });
 
+/* GET /orders/open - every open order as a ticket (waiter board / KDS).
+   Grouped per order with table name + line items; drops off once served. */
+orderRouter.get("/open", authMiddleware, async (req, res) => {
+  try {
+    const tickets = await orderRepo.findOpenOrdersWithDetails();
+    return res.status(200).json({ data: tickets });
+  } catch (error) {
+    console.error(error);
+    return res.status(400).json({ message: "Retrieving open tickets failed." });
+  }
+});
+
 /* GET /orders/kitchen/queue - ticket lines still to cook (future KDS module) */
 orderRouter.get("/kitchen/queue", authMiddleware, async (req, res) => {
   try {
@@ -163,7 +175,19 @@ orderRouter.patch("/details/:id/status", authMiddleware, async (req, res) => {
     emitTo("kitchen", "order:item-status", updated);
     emitTo(`table:${updated.table_id}`, "order:item-status", updated);
 
-    return res.status(200).json({ message: "Item status updated!", data: updated });
+    // Ticking items moves the whole order along (placed -> in_progress ->
+    // ready -> served); a fully served order drops off the waiter board.
+    const orderChange = await orderRepo.syncOrderStatus(updated.orders_id);
+    if (orderChange) {
+      emitTo("waiter", "order:status", orderChange);
+      emitTo("kitchen", "order:status", orderChange);
+      emitTo(`table:${orderChange.table_id}`, "order:status", orderChange);
+    }
+
+    return res.status(200).json({
+      message: "Item status updated!",
+      data: { ...updated, order_status: orderChange ? orderChange.status : undefined },
+    });
   } catch (error) {
     console.error(error);
     return res.status(400).json({ message: "Updating item status failed." });

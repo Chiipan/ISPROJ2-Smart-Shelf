@@ -7,9 +7,14 @@ export const BASE_URL = 'http://localhost:3002';
 
 let authToken = null;
 let tableInfo = null; // { table_id, table_name } decoded from the JWT
+let staffInfo = null; // { user_id, name, role } decoded from the JWT
 
 export function getTableInfo() {
   return tableInfo;
+}
+
+export function getStaffInfo() {
+  return staffInfo;
 }
 
 function decodeJwtPayload(token) {
@@ -48,9 +53,60 @@ export async function loginTable(tablename, password) {
   return tableInfo;
 }
 
+/* Staff (waiter/kitchen/admin) login - users table, email + password */
+export async function loginStaff(email, password) {
+  const res = await request('/auth/login', {
+    method: 'POST',
+    body: { email, password },
+  });
+  authToken = res.data;
+  const payload = decodeJwtPayload(authToken);
+  staffInfo = {
+    user_id: payload.user_id,
+    name: `${payload.first_name || ''} ${payload.last_name || ''}`.trim(),
+    role: payload.user_role?.role_name || 'staff',
+  };
+  return staffInfo;
+}
+
+/* Member (registered customer) auth. Runs AFTER the table login and must
+   NOT replace the table's token - orders are still placed as the table -
+   so these use bare fetch instead of request(). */
+export async function loginMember(email, password) {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json.message || json.error || `Request failed (${res.status})`);
+  }
+  const payload = decodeJwtPayload(json.data);
+  return {
+    name: `${payload.first_name || ''} ${payload.last_name || ''}`.trim(),
+    email: payload.email,
+    role: payload.user_role?.role_name || 'customer',
+  };
+}
+
+export async function registerMember({ first_name, last_name, email, password }) {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ first_name, last_name, email, password, role: 'customer' }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json.message || json.error || `Request failed (${res.status})`);
+  }
+  return json;
+}
+
 export function logout() {
   authToken = null;
   tableInfo = null;
+  staffInfo = null;
 }
 
 /* ---- menu ---- */
@@ -83,6 +139,45 @@ export async function placeOrder(cartItems) {
 
 export async function fetchMyOrders() {
   const res = await request('/orders/my-orders');
+  return res.data;
+}
+
+/* ---- waiter table board ---- */
+
+// Every table, all the time: { table_id, table_name, capacity, occupied,
+// calls: [pending waiter_calls], items: [open order lines] }
+export async function fetchTableBoard() {
+  const res = await request('/tables/board');
+  return res.data;
+}
+
+/* ---- waiter ticket board ---- */
+
+// Every open order as a ticket: { orders_id, table_name, status, items: [...] }
+export async function fetchOpenTickets() {
+  const res = await request('/orders/open');
+  return res.data;
+}
+
+// Advance one ticket line: 'queued' -> 'in_progress' -> 'ready_to_serve' -> 'served'
+export async function updateItemStatus(orderDetailsId, status) {
+  const res = await request(`/orders/details/${orderDetailsId}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
+  return res.data;
+}
+
+export async function fetchPendingCalls() {
+  const res = await request('/waiter-calls/pending');
+  return res.data;
+}
+
+export async function updateCallStatus(waiterCallId, status) {
+  const res = await request(`/waiter-calls/${waiterCallId}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
   return res.data;
 }
 

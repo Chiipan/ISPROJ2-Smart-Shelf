@@ -13,7 +13,8 @@ GO
 INSERT INTO dbo.roles (role_id, role_name) VALUES
 ('a1000000-0000-4000-8000-000000000001', 'admin'),
 ('a1000000-0000-4000-8000-000000000002', 'waiter'),
-('a1000000-0000-4000-8000-000000000003', 'kitchen');
+('a1000000-0000-4000-8000-000000000003', 'kitchen'),
+('a1000000-0000-4000-8000-000000000004', 'customer'); -- self-registered members
 
 /* ---------------- users ----------------
    Password below is a bcrypt hash of "admin123" - replace in production. */
@@ -21,23 +22,52 @@ INSERT INTO dbo.users (user_id, first_name, last_name, email, password) VALUES
 ('b1000000-0000-4000-8000-000000000001', 'System', 'Admin', 'admin@smartshelf.local',
  '$2b$10$9ZFdl7OFVt35M2328GwuAOVkp1wBebrTT4ET2jegGC1mSAFE/sgSe');
 
+/* Waiter dashboard login - bcrypt hash of "waiter123" */
+INSERT INTO dbo.users (user_id, first_name, last_name, email, password) VALUES
+('b1000000-0000-4000-8000-000000000002', 'Juan', 'Dela Cruz', 'waiter@smartshelf.local',
+ '$2b$10$pXgiBOBT65S.W3eth19mKOd/PfIZCWgbrLSahwFbPOkdfFELN4X4q');
+
+/* Kitchen dashboard login - bcrypt hash of "kitchen123" */
+INSERT INTO dbo.users (user_id, first_name, last_name, email, password) VALUES
+('b1000000-0000-4000-8000-000000000003', 'Pedro', 'Reyes', 'kitchen@smartshelf.local',
+ '$2b$10$bE0jKL7nH6lycniFY6dFUelhiOZwxcUV0meKnrLtamsTPX4zGPS1K');
+
 INSERT INTO dbo.roles_and_users (roles_and_users_id, user_id, role_id) VALUES
 ('c1000000-0000-4000-8000-000000000001',
  'b1000000-0000-4000-8000-000000000001',
- 'a1000000-0000-4000-8000-000000000001');
+ 'a1000000-0000-4000-8000-000000000001'),
+('c1000000-0000-4000-8000-000000000002',
+ 'b1000000-0000-4000-8000-000000000002',
+ 'a1000000-0000-4000-8000-000000000002'), -- waiter
+('c1000000-0000-4000-8000-000000000003',
+ 'b1000000-0000-4000-8000-000000000003',
+ 'a1000000-0000-4000-8000-000000000003'); -- kitchen
 
 /* ---------------- staff ---------------- */
-INSERT INTO dbo.staff (staff_id, first_name, last_name, role_id) VALUES
-('d1000000-0000-4000-8000-000000000001', 'Juan',  'Dela Cruz', 'a1000000-0000-4000-8000-000000000002'), -- waiter
-('d1000000-0000-4000-8000-000000000002', 'Maria', 'Santos',    'a1000000-0000-4000-8000-000000000002'), -- waiter
-('d1000000-0000-4000-8000-000000000003', 'Pedro', 'Reyes',     'a1000000-0000-4000-8000-000000000003'); -- kitchen
+INSERT INTO dbo.staff (staff_id, first_name, last_name, role_id, user_id) VALUES
+('d1000000-0000-4000-8000-000000000001', 'Juan',  'Dela Cruz', 'a1000000-0000-4000-8000-000000000002',
+ 'b1000000-0000-4000-8000-000000000002'),                                                                -- waiter (has login)
+('d1000000-0000-4000-8000-000000000002', 'Maria', 'Santos',    'a1000000-0000-4000-8000-000000000002', NULL), -- waiter
+('d1000000-0000-4000-8000-000000000003', 'Pedro', 'Reyes',     'a1000000-0000-4000-8000-000000000003',
+ 'b1000000-0000-4000-8000-000000000003');                                                                -- kitchen (has login)
 
 /* ---------------- tables (tablet logins) ---------------- */
 INSERT INTO dbo.tables (table_id, table_name, password, table_type, capacity) VALUES
-('e1000000-0000-4000-8000-000000000001', 'Table 1', '1234', 1, 2),
-('e1000000-0000-4000-8000-000000000002', 'Table 2', '1234', 1, 4),
-('e1000000-0000-4000-8000-000000000003', 'Table 3', '1234', 1, 4),
-('e1000000-0000-4000-8000-000000000004', 'Table 4', '1234', 2, 8);
+('e1000000-0000-4000-8000-000000000001', 'Table 1',  '1234', 1, 2),
+('e1000000-0000-4000-8000-000000000002', 'Table 2',  '1234', 1, 4),
+('e1000000-0000-4000-8000-000000000003', 'Table 3',  '1234', 1, 4),
+('e1000000-0000-4000-8000-000000000004', 'Table 4',  '1234', 2, 8),
+('e1000000-0000-4000-8000-000000000005', 'Table 5',  '1234', 1, 2),
+('e1000000-0000-4000-8000-000000000006', 'Table 6',  '1234', 1, 4),
+('e1000000-0000-4000-8000-000000000007', 'Table 7',  '1234', 1, 4),
+('e1000000-0000-4000-8000-000000000008', 'Table 8',  '1234', 1, 6),
+('e1000000-0000-4000-8000-000000000009', 'Table 9',  '1234', 1, 2),
+('e1000000-0000-4000-8000-000000000010', 'Table 10', '1234', 2, 8),
+('e1000000-0000-4000-8000-000000000011', 'Table 11', '1234', 1, 4),
+('e1000000-0000-4000-8000-000000000012', 'Table 12', '1234', 1, 6),
+('e1000000-0000-4000-8000-000000000013', 'Table 13', '1234', 1, 2),
+('e1000000-0000-4000-8000-000000000014', 'Table 14', '1234', 1, 4),
+('e1000000-0000-4000-8000-000000000015', 'Table 15', '1234', 2, 10);
 
 /* ---------------- menu ---------------- */
 INSERT INTO dbo.categories (category_id, category_name) VALUES

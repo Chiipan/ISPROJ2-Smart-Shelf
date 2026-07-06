@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../theme';
-import { fetchMyOrders } from '../api/client';
+import { fetchMyOrders, getTableInfo } from '../api/client';
+import { getSocket, joinRoom } from '../api/socket';
 
 // Maps order_details.status values (database) to badge text + colors
 const STATUS_STYLE = {
@@ -18,19 +19,32 @@ export default function OrderStatusScreen({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadOrders = async () => {
-    setLoading(true);
+  const loadOrders = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       setOrders(await fetchMyOrders());
     } catch (e) {
       setError(e.message || 'Could not load your orders');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
-  useEffect(() => { loadOrders(); }, []);
+  // Initial load + live refresh whenever the kitchen/waiter updates a status
+  useEffect(() => {
+    loadOrders();
+
+    const table = getTableInfo();
+    if (!table) return;
+
+    const socket = getSocket();
+    joinRoom(`table:${table.table_id}`);
+    const refresh = () => loadOrders(true);
+    const events = ['order:placed', 'order:status', 'order:item-status'];
+    events.forEach((ev) => socket.on(ev, refresh));
+    return () => events.forEach((ev) => socket.off(ev, refresh));
+  }, []);
 
   const allItems = orders.flatMap(o => o.items);
 
