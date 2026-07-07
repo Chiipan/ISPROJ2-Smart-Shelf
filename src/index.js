@@ -13,6 +13,8 @@ const categoryRouter = require("./routes/category");
 const menuRouter = require("./routes/menu");
 const orderRouter = require("./routes/orders");
 const waiterCallRouter = require("./routes/waiterCalls");
+const inventoryRouter = require("./routes/inventory");
+const adminRouter = require("./routes/admin");
 
 const app = express();
 
@@ -30,6 +32,8 @@ app.use("/category", categoryRouter);
 app.use("/menu", menuRouter);
 app.use("/orders", orderRouter);
 app.use("/waiter-calls", waiterCallRouter);
+app.use("/inventory", inventoryRouter);
+app.use("/admin", adminRouter);
 
 // Socket.IO shares the same HTTP server/port as the REST API
 const server = http.createServer(app);

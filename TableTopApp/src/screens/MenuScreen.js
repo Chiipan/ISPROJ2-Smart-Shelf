@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Activi
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme';
 import { fetchMenu } from '../api/client';
+import { getSocket } from '../api/socket';
 import MenuCard from '../components/MenuCard';
 
 export default function MenuScreen({ onAddToCart }) {
@@ -11,19 +12,27 @@ export default function MenuScreen({ onAddToCart }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadMenu = async () => {
-    setLoading(true);
+  const loadMenu = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       setMenu(await fetchMenu());
     } catch (e) {
       setError(e.message || 'Could not load the menu');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
-  useEffect(() => { loadMenu(); }, []);
+  // Automatic menu update: dishes flip available/unavailable in real time
+  // as ingredients run out or get restocked
+  useEffect(() => {
+    loadMenu();
+    const socket = getSocket();
+    const refresh = () => loadMenu(true);
+    socket.on('menu:availability', refresh);
+    return () => socket.off('menu:availability', refresh);
+  }, []);
 
   const filtered = menu.filter(
     item =>

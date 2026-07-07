@@ -240,6 +240,49 @@ export async function cancelCheckout(ordersId) {
   return res.data;
 }
 
+/* ---- admin module ---- */
+
+// Sales report: { today: {orders_count, gross_sales}, daily: [...],
+// by_method: [...] } for the last N days
+export async function fetchAdminSales(days = 7) {
+  const res = await request(`/admin/sales?days=${days}`);
+  return res.data;
+}
+
+// Item sales + auto-generated fast/slow movers
+export async function fetchAdminItems() {
+  const res = await request('/admin/items');
+  return res.data;
+}
+
+// Inventory overview: stock, thresholds, status ok|low|out, used_by
+export async function fetchAdminInventory() {
+  const res = await request('/inventory');
+  return res.data;
+}
+
+// Signed stock movement: +20 restock, -5 spoilage/adjustment.
+// Returns { inventory, menu_changes } (dishes flipping availability).
+export async function adjustInventory(inventoryId, quantityChange, changeType = 'restock') {
+  const res = await request(`/inventory/${inventoryId}/adjust`, {
+    method: 'POST',
+    body: { quantity_change: quantityChange, change_type: changeType },
+  });
+  return res.data;
+}
+
+// All tables (admin capacity editing) - route returns a raw array
+export async function fetchAllTables() {
+  return request('/tables');
+}
+
+export async function updateTableCapacity(tableId, capacity) {
+  return request(`/tables/${tableId}`, {
+    method: 'PUT',
+    body: { capacity },
+  });
+}
+
 /* ---- waiter call ---- */
 
 export async function callWaiter(message) {

@@ -433,7 +433,9 @@ WHERE p.is_deleted = 0 AND p.status = 'paid'
 GROUP BY CAST(p.paid_at AS DATE);
 GO
 
-/* ADMIN: best sellers - quantity and revenue per menu item */
+/* ADMIN: best sellers - quantity and revenue per menu item.
+   An item counts as sold once its order has a paid payments row (the
+   pay-before-kitchen flow pays up front, so orders end at 'served'). */
 CREATE VIEW dbo.vw_item_sales AS
 SELECT
   mi.menu_item_id,
@@ -442,9 +444,12 @@ SELECT
   SUM(od.quantity) AS total_qty_sold,
   SUM(od.total)    AS total_revenue
 FROM dbo.order_details od
-JOIN dbo.orders     o  ON o.orders_id     = od.orders_id AND o.is_deleted = 0 AND o.status = 'paid'
+JOIN dbo.orders     o  ON o.orders_id     = od.orders_id AND o.is_deleted = 0
 JOIN dbo.menu_item  mi ON mi.menu_item_id = od.menu_item_id
 JOIN dbo.categories c  ON c.category_id   = mi.category_id
 WHERE od.is_deleted = 0 AND od.status <> 'cancelled'
+  AND EXISTS (SELECT 1 FROM dbo.payments p
+              WHERE p.orders_id = o.orders_id
+                AND p.status = 'paid' AND p.is_deleted = 0)
 GROUP BY mi.menu_item_id, mi.menu_title, c.category_name;
 GO

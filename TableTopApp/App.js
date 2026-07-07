@@ -11,6 +11,9 @@ import CallWaiterScreen from './src/screens/CallWaiterScreen';
 import WaiterDashboardScreen from './src/screens/WaiterDashboardScreen';
 import TableBoardScreen from './src/screens/TableBoardScreen';
 import KitchenScreen from './src/screens/KitchenScreen';
+import AdminSalesScreen from './src/screens/AdminSalesScreen';
+import AdminInventoryScreen from './src/screens/AdminInventoryScreen';
+import AdminTablesScreen from './src/screens/AdminTablesScreen';
 import Sidebar from './src/components/Sidebar';
 import WaiterSidebar from './src/components/WaiterSidebar';
 import { logout } from './src/api/client';
@@ -26,7 +29,12 @@ export default function App() {
   const [checkout, setCheckout] = useState(null);
 
   const handleLogin = (nextSession) => {
-    setActiveScreen(nextSession.kind === 'staff' ? 'tables' : 'menu');
+    const initial =
+      nextSession.kind !== 'staff' ? 'menu'
+      : nextSession.role === 'admin' ? 'sales'
+      : nextSession.role === 'kitchen' ? 'kds'
+      : 'tables';
+    setActiveScreen(initial);
     setSession(nextSession);
   };
 
@@ -88,9 +96,37 @@ export default function App() {
     );
   }
 
-  // Staff layouts: kitchen gets its placeholder KDS, everyone else
-  // (waiter, admin) gets the waiter dashboard (Tables + Tickets)
+  // Staff layouts: admin gets the owner dashboard, kitchen its placeholder
+  // KDS, everyone else (waiter) the waiter dashboard (Tables + Tickets)
   if (session.kind === 'staff') {
+    if (session.role === 'admin') {
+      const adminScreens = {
+        sales: <AdminSalesScreen />,
+        inventory: <AdminInventoryScreen />,
+        admintables: <AdminTablesScreen />,
+      };
+      return (
+        <View style={styles.root}>
+          <StatusBar style="light" />
+          <WaiterSidebar
+            activeScreen={activeScreen}
+            onNavigate={setActiveScreen}
+            waiterName={session.name}
+            onLogout={handleLogout}
+            roleLabel="Admin"
+            navItems={[
+              { id: 'sales',       label: 'Sales',     icon: 'bar-chart-outline', activeIcon: 'bar-chart' },
+              { id: 'inventory',   label: 'Inventory', icon: 'cube-outline',      activeIcon: 'cube' },
+              { id: 'admintables', label: 'Tables',    icon: 'grid-outline',      activeIcon: 'grid' },
+            ]}
+          />
+          <View style={styles.content}>
+            {adminScreens[activeScreen] || <AdminSalesScreen />}
+          </View>
+        </View>
+      );
+    }
+
     if (session.role === 'kitchen') {
       return (
         <View style={styles.root}>

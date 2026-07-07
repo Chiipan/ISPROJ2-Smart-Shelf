@@ -3,16 +3,18 @@ const { OrderRepository } = require("../repositories/orderRepository");
 const { MenuRepository } = require("../repositories/menuRepository");
 const { StaffRepository } = require("../repositories/staffRepository");
 const { DiscountRepository } = require("../repositories/discountRepository");
+const { InventoryRepository } = require("../repositories/inventoryRepository");
 const { GenericRepository } = require("../repositories/genericRepository");
 const { executeQueryForRepo } = require("../db");
 const authMiddleware = require("../middleware/Middleware");
-const { emitTo } = require("../realtime");
+const { emitTo, broadcast } = require("../realtime");
 
 const orderRouter = express.Router();
 const orderRepo = new OrderRepository();
 const menuRepo = new MenuRepository();
 const staffRepo = new StaffRepository();
 const discountRepo = new DiscountRepository();
+const inventoryRepo = new InventoryRepository();
 const callRepo = new GenericRepository("dbo.waiter_calls", "waiter_call_id");
 
 // Validates cart items against the menu and prices them from the DB.
@@ -83,6 +85,17 @@ async function resolveFlowCalls(table_id, messagePrefix) {
 async function fireOrderAfterPayment(orders_id, method, amount) {
   await orderRepo.updateOrderStatus(orders_id, "placed");
   const order = await orderRepo.findByIdWithDetails(orders_id);
+
+  // Real-time inventory: each line item's recipe deducts its ingredients
+  // (inventory_logs rows), and dishes whose ingredients ran out flip to
+  // 'unavailable' on every tablet immediately.
+  await inventoryRepo.deductForOrder(order);
+  const menuChanges = await inventoryRepo.syncMenuAvailability();
+  if (menuChanges.length > 0) broadcast("menu:availability", menuChanges);
+
+  const lowStock = await inventoryRepo.findLowStock();
+  if (lowStock.length > 0) emitTo("admin", "inventory:low", lowStock);
+  emitTo("admin", "inventory:update", { orders_id });
 
   emitTo("kitchen", "order:new", order);
   emitTo("waiter", "order:new", order);

@@ -46,4 +46,10 @@ function emitTo(room, event, payload) {
   if (io) io.to(room).emit(event, payload);
 }
 
-module.exports = { initRealtime, emitTo };
+// Everyone, regardless of room - e.g. 'menu:availability' so every
+// customer tablet refreshes when a dish sells out or comes back.
+function broadcast(event, payload) {
+  if (io) io.emit(event, payload);
+}
+
+module.exports = { initRealtime, emitTo, broadcast };

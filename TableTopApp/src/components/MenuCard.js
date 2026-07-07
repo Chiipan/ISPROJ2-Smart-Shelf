@@ -32,14 +32,22 @@ export default function MenuCard({ item, onAddToCart }) {
         <Text style={styles.itemPrice}>PHP {item.price}</Text>
         <Text style={styles.itemDesc} numberOfLines={3}>{item.description}</Text>
 
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => onAddToCart && onAddToCart(item)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={14} color={COLORS.white} />
-          <Text style={styles.addBtnText}>Add to Cart</Text>
-        </TouchableOpacity>
+        {/* Real-time inventory: sold-out dishes can't be ordered */}
+        {item.available === false ? (
+          <View style={styles.soldOutBtn}>
+            <Ionicons name="close-circle-outline" size={14} color={COLORS.grayDark} />
+            <Text style={styles.soldOutText}>Out of Stock</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => onAddToCart && onAddToCart(item)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={14} color={COLORS.white} />
+            <Text style={styles.addBtnText}>Add to Cart</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -125,6 +133,20 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  soldOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEEEEE',
+    borderRadius: 6,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  soldOutText: {
+    color: COLORS.grayDark,
     fontSize: 11,
     fontWeight: '700',
   },
