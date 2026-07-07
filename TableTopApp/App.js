@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import LoginScreen from './src/screens/LoginScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
+import CheckoutScreen from './src/screens/CheckoutScreen';
 import OrderStatusScreen from './src/screens/OrderStatusScreen';
 import CallWaiterScreen from './src/screens/CallWaiterScreen';
 import WaiterDashboardScreen from './src/screens/WaiterDashboardScreen';
@@ -21,6 +22,8 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [activeScreen, setActiveScreen] = useState('menu');
   const [cartItems, setCartItems] = useState([]);
+  // The 'pending_payment' order being paid on the checkout screen
+  const [checkout, setCheckout] = useState(null);
 
   const handleLogin = (nextSession) => {
     setActiveScreen(nextSession.kind === 'staff' ? 'tables' : 'menu');
@@ -57,9 +60,23 @@ export default function App() {
     );
   };
 
-  const handleOrderPlaced = () => {
+  // Cart -> checkout: the order now exists as 'pending_payment'
+  const handleCheckoutStarted = (order) => {
+    setCheckout(order);
+    setActiveScreen('checkout');
+  };
+
+  // Payment done: order fired to the kitchen, cart empties
+  const handlePaid = () => {
+    setCheckout(null);
     setCartItems([]);
     setActiveScreen('orders');
+  };
+
+  // Checkout abandoned (order cancelled server-side); cart is kept
+  const handleCheckoutCancelled = () => {
+    setCheckout(null);
+    setActiveScreen('cart');
   };
 
   if (!session) {
@@ -121,8 +138,18 @@ export default function App() {
             onRemove={removeFromCart}
             onUpdateQty={updateQty}
             onNavigate={setActiveScreen}
-            onOrderPlaced={handleOrderPlaced}
+            onCheckout={handleCheckoutStarted}
           />
+        );
+      case 'checkout':
+        return checkout ? (
+          <CheckoutScreen
+            order={checkout}
+            onDone={handlePaid}
+            onCancel={handleCheckoutCancelled}
+          />
+        ) : (
+          <MenuScreen onAddToCart={addToCart} />
         );
       case 'orders':
         return <OrderStatusScreen onNavigate={setActiveScreen} />;

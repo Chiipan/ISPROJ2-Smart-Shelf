@@ -181,6 +181,65 @@ export async function updateCallStatus(waiterCallId, status) {
   return res.data;
 }
 
+/* ---- checkout + payment (pay-before-kitchen flow) ----
+   A real gateway (e.g. PayMongo payment intents) would replace the
+   simulated card/qrph steps; the API shape is already gateway-ready. */
+
+// Discount types from the DB (Senior Citizen / PWD, 20%)
+export async function fetchDiscounts() {
+  const res = await request('/discount');
+  return res.data;
+}
+
+// Creates a 'pending_payment' order. discount (optional):
+// { discount_id, menu_item_ids: [ids of the discount holder's items] }
+export async function checkoutOrder(cartItems, discount = null) {
+  const items = cartItems.map((c) => ({
+    menu_item_id: c.id,
+    quantity: c.quantity,
+    notes: c.notes || undefined,
+  }));
+  const res = await request('/orders/checkout', {
+    method: 'POST',
+    body: { items, discount },
+  });
+  return res.data;
+}
+
+// Waiter at the table approves/denies the Senior/PWD ID with their staff
+// code. The table itself may deny (cancel) without a code.
+export async function verifyDiscount(ordersId, approve, code) {
+  const res = await request(`/orders/${ordersId}/discount/verify`, {
+    method: 'POST',
+    body: { approve, code },
+  });
+  return res.data;
+}
+
+// method: 'cash' (calls a waiter to collect) | 'card' | 'qrph' (simulated)
+export async function payOrder(ordersId, method) {
+  const res = await request(`/orders/${ordersId}/pay`, {
+    method: 'POST',
+    body: { method },
+  });
+  return res.data;
+}
+
+// Waiter confirms the cash was received (staff code on the tablet)
+export async function confirmCashPayment(ordersId, code) {
+  const res = await request(`/orders/${ordersId}/pay/confirm-cash`, {
+    method: 'POST',
+    body: { code },
+  });
+  return res.data;
+}
+
+// Abandon an unpaid checkout and return to the cart
+export async function cancelCheckout(ordersId) {
+  const res = await request(`/orders/${ordersId}/cancel`, { method: 'POST' });
+  return res.data;
+}
+
 /* ---- waiter call ---- */
 
 export async function callWaiter(message) {

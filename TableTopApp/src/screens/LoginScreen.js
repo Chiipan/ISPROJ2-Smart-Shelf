@@ -309,26 +309,29 @@ export default function LoginScreen({ onLogin }) {
           <Text style={styles.logoText}>TableTop</Text>
         </View>
 
-        {/* Customer / Waiter / Kitchen tabs */}
-        <View style={styles.tabsRow}>
-          {TABS.map((tab) => {
-            const active = mode === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[styles.tab, active && styles.tabActive]}
-                onPress={() => switchMode(tab.id)}
-              >
-                <Ionicons
-                  name={tab.icon}
-                  size={15}
-                  color={active ? COLORS.white : COLORS.textSecondary}
-                />
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {/* Customer / Waiter / Kitchen tabs - hidden once a table is logged
+            in: from there it's the customer-facing guest/member screen */}
+        {step === 'table' && (
+          <View style={styles.tabsRow}>
+            {TABS.map((tab) => {
+              const active = mode === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[styles.tab, active && styles.tabActive]}
+                  onPress={() => switchMode(tab.id)}
+                >
+                  <Ionicons
+                    name={tab.icon}
+                    size={15}
+                    color={active ? COLORS.white : COLORS.textSecondary}
+                  />
+                  <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {mode === 'customer' && renderCustomer()}
         {mode === 'waiter' && renderStaff('Waiter')}

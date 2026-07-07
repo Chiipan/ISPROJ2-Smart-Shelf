@@ -43,13 +43,14 @@ INSERT INTO dbo.roles_and_users (roles_and_users_id, user_id, role_id) VALUES
  'b1000000-0000-4000-8000-000000000003',
  'a1000000-0000-4000-8000-000000000003'); -- kitchen
 
-/* ---------------- staff ---------------- */
-INSERT INTO dbo.staff (staff_id, first_name, last_name, role_id, user_id) VALUES
+/* ---------------- staff ----------------
+   staff_code = PIN typed on a customer tablet (ID verification, cash confirm) */
+INSERT INTO dbo.staff (staff_id, first_name, last_name, role_id, user_id, staff_code) VALUES
 ('d1000000-0000-4000-8000-000000000001', 'Juan',  'Dela Cruz', 'a1000000-0000-4000-8000-000000000002',
- 'b1000000-0000-4000-8000-000000000002'),                                                                -- waiter (has login)
-('d1000000-0000-4000-8000-000000000002', 'Maria', 'Santos',    'a1000000-0000-4000-8000-000000000002', NULL), -- waiter
+ 'b1000000-0000-4000-8000-000000000002', '1111'),                                                              -- waiter (has login)
+('d1000000-0000-4000-8000-000000000002', 'Maria', 'Santos',    'a1000000-0000-4000-8000-000000000002', NULL, '2222'), -- waiter
 ('d1000000-0000-4000-8000-000000000003', 'Pedro', 'Reyes',     'a1000000-0000-4000-8000-000000000003',
- 'b1000000-0000-4000-8000-000000000003');                                                                -- kitchen (has login)
+ 'b1000000-0000-4000-8000-000000000003', '3333');                                                              -- kitchen (has login)
 
 /* ---------------- tables (tablet logins) ---------------- */
 INSERT INTO dbo.tables (table_id, table_name, password, table_type, capacity) VALUES

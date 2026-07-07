@@ -106,6 +106,7 @@ CREATE TABLE dbo.staff (
   last_name   NVARCHAR(255) NOT NULL,
   role_id     NVARCHAR(64)  NULL CONSTRAINT FK_staff_role REFERENCES dbo.roles (role_id),
   user_id     NVARCHAR(64)  NULL CONSTRAINT FK_staff_user REFERENCES dbo.users (user_id), -- login account, if any
+  staff_code  NVARCHAR(20)  NULL,                 -- PIN typed on a customer tablet (ID verify, cash confirm)
   created_at  DATETIME2     NOT NULL CONSTRAINT DF_staff_created DEFAULT SYSDATETIME(),
   updated_at  DATETIME2     NULL,
   is_deleted  BIT           NOT NULL CONSTRAINT DF_staff_deleted DEFAULT 0
@@ -175,7 +176,8 @@ CREATE TABLE dbo.orders (
   staff_id   NVARCHAR(64) NULL     CONSTRAINT FK_orders_staff REFERENCES dbo.staff (staff_id), -- waiter who served
   status     NVARCHAR(20) NOT NULL CONSTRAINT DF_orders_status DEFAULT 'placed'
              CONSTRAINT CK_orders_status
-             CHECK (status IN ('placed','in_progress','ready','served','paid','cancelled')),
+             CHECK (status IN ('pending_payment','placed','in_progress','ready','served','paid','cancelled')),
+             -- 'pending_payment': checked out but unpaid; invisible to kitchen/waiter boards
   order_date DATETIME2    NOT NULL CONSTRAINT DF_orders_date    DEFAULT SYSDATETIME(),
   created_at DATETIME2    NOT NULL CONSTRAINT DF_orders_created DEFAULT SYSDATETIME(),
   updated_at DATETIME2    NULL,
@@ -196,6 +198,8 @@ CREATE TABLE dbo.order_details (
   quantity         INT           NOT NULL CONSTRAINT CK_od_qty CHECK (quantity > 0),
   total            DECIMAL(10,2) NOT NULL,          -- app computes price * quantity
   notes            NVARCHAR(255) NULL,              -- customer special requests
+  discount_id      NVARCHAR(64)  NULL,              -- discount holder's items (Senior/PWD);
+                                                    -- FK added after dbo.discounts is created below
   status           NVARCHAR(20)  NOT NULL CONSTRAINT DF_od_status DEFAULT 'queued'
                    CONSTRAINT CK_od_status
                    CHECK (status IN ('queued','in_progress','ready_to_serve','served','cancelled')),
@@ -323,10 +327,21 @@ CREATE TABLE dbo.discounts (
 );
 GO
 
+/* order_details.discount_id FK lives here because discounts is created later
+   than order_details */
+ALTER TABLE dbo.order_details ADD CONSTRAINT FK_od_discount
+  FOREIGN KEY (discount_id) REFERENCES dbo.discounts (discount_id);
+GO
+
+/* One row per discount request on an order. status tracks the waiter's
+   on-site ID verification (staff_code entered on the customer tablet). */
 CREATE TABLE dbo.orders_and_discounts (
   orders_and_discounts_id NVARCHAR(64) NOT NULL CONSTRAINT PK_orders_and_discounts PRIMARY KEY,
   orders_id               NVARCHAR(64) NOT NULL CONSTRAINT FK_oad_order    REFERENCES dbo.orders (orders_id),
   discount_id             NVARCHAR(64) NOT NULL CONSTRAINT FK_oad_discount REFERENCES dbo.discounts (discount_id),
+  status                  NVARCHAR(20) NOT NULL CONSTRAINT DF_oad_status DEFAULT 'pending'
+                          CONSTRAINT CK_oad_status CHECK (status IN ('pending','approved','denied')),
+  verified_by             NVARCHAR(64) NULL CONSTRAINT FK_oad_staff REFERENCES dbo.staff (staff_id),
   created_at              DATETIME2    NOT NULL CONSTRAINT DF_oad_created DEFAULT SYSDATETIME(),
   updated_at              DATETIME2    NULL,
   is_deleted              BIT          NOT NULL CONSTRAINT DF_oad_deleted DEFAULT 0
@@ -340,7 +355,7 @@ CREATE TABLE dbo.payments (
   orders_id      NVARCHAR(64)  NOT NULL CONSTRAINT FK_pay_order REFERENCES dbo.orders (orders_id),
   payment_method NVARCHAR(20)  NOT NULL
                  CONSTRAINT CK_pay_method
-                 CHECK (payment_method IN ('cash','card','gcash','maya','other')),
+                 CHECK (payment_method IN ('cash','card','gcash','maya','qrph','other')),
   amount         DECIMAL(10,2) NOT NULL CONSTRAINT CK_pay_amount CHECK (amount >= 0),
   status         NVARCHAR(20)  NOT NULL CONSTRAINT DF_pay_status DEFAULT 'pending'
                  CONSTRAINT CK_pay_status CHECK (status IN ('pending','paid','refunded','voided')),
@@ -358,7 +373,8 @@ GO
    MODULE VIEWS - ready-made queries for each dashboard
    ================================================================ */
 
-/* KITCHEN: live ticket lines still to cook, oldest first */
+/* KITCHEN: live ticket lines still to cook, oldest first.
+   Orders in 'pending_payment' are invisible - payment fires them here. */
 CREATE VIEW dbo.vw_kitchen_queue AS
 SELECT
   od.order_details_id,
@@ -371,6 +387,7 @@ SELECT
   od.created_at AS ordered_at
 FROM dbo.order_details od
 JOIN dbo.orders    o  ON o.orders_id     = od.orders_id     AND o.is_deleted  = 0
+                     AND o.status IN ('placed','in_progress','ready')
 JOIN dbo.tables    t  ON t.table_id      = o.table_id
 JOIN dbo.menu_item mi ON mi.menu_item_id = od.menu_item_id
 WHERE od.is_deleted = 0

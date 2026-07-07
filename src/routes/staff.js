@@ -5,6 +5,28 @@ const { StaffRepository } = require("../repositories/staffRepository");
 const staffRouter = express.Router();
 const staffRepo = new StaffRepository();
 
+/* POST /staff/verify-code - a staff member types their PIN on a customer
+   tablet (Senior/PWD ID verification, cash collection). Never returns the
+   code itself. NOTE: must be registered before the "/:id" routes. */
+staffRouter.post("/verify-code", authMiddleware, async (req, res) => {
+  try {
+    const staff = await staffRepo.findByCode(req.body.code);
+    if (!staff) {
+      return res.status(401).json({ message: "Invalid staff code" });
+    }
+    return res.status(200).json({
+      data: {
+        staff_id: staff.staff_id,
+        name: `${staff.first_name} ${staff.last_name}`,
+        role: staff.role_name,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(400).json({ error: "Verifying staff code failed" });
+  }
+});
+
 // Get all staff
 staffRouter.get("/", authMiddleware, async (req, res) => {
   try {
